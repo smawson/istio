@@ -1,0 +1,20 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: productcatalogvm
+  namespace: hipster
+spec:
+  endpoints:
+  - address: 10.180.0.4
+    labels:
+      app: productcatalogservice
+    ports:
+      grpc: 3550
+  hosts:
+  - productcatalogservice.hipster.svc.cluster.local
+  location: MESH_INTERNAL
+  ports:
+  - name: grpc
+    number: 3550
+    protocol: GRPC
+  resolution: STATIC

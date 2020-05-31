@@ -70,8 +70,9 @@ type Plugin struct {
 	accessTokenCacheHit uint64
 }
 
-// CreateTokenManagerPlugin creates a plugin that fetches token from a Google OAuth 2.0 authorization server.
+// CreateTokenManagerPlugin creates a pluginLog.Infof("CreateTokenManagerPlugin(%s, %s, ...)", trustdomain, gcpProjectNumber) that fetches token from a Google OAuth 2.0 authorization server.
 func CreateTokenManagerPlugin(trustDomain, gcpProjectNumber, gkeClusterURL string, enableCache bool) (*Plugin, error) {
+	pluginLog.Infof("CreateTokenManagerPlugin(%s, %s, %s, %v)", trustDomain, gcpProjectNumber, gkeClusterURL, enableCache)
 	caCertPool, err := x509.SystemCertPool()
 	if err != nil {
 		pluginLog.Errorf("Failed to get SystemCertPool: %v", err)
@@ -106,7 +107,7 @@ func (p *Plugin) ExchangeToken(parameters stsservice.StsRequestParameters) ([]by
 	if tokenSTS, ok := p.useCachedToken(); ok {
 		return tokenSTS, nil
 	}
-	pluginLog.Debugf("Start to fetch token with STS request parameters: %v", parameters)
+	pluginLog.Infof("Start to fetch token with STS request parameters: %v", parameters)
 	ftResp, err := p.fetchFederatedToken(parameters)
 	if err != nil {
 		return nil, err
@@ -138,14 +139,14 @@ func (p *Plugin) useCachedToken() ([]byte, bool) {
 	token := v.(stsservice.TokenInfo)
 	remainingLife := time.Until(token.ExpireTime)
 	if cacheHitCount%cacheHitDivisor == 0 {
-		pluginLog.Debugf("find a cached access token with remaining lifetime: %s (number of cache hits: %d)",
+		pluginLog.Infof("find a cached access token with remaining lifetime: %s (number of cache hits: %d)",
 			remainingLife.String(), cacheHitCount)
 	}
 	if remainingLife > time.Duration(defaultGracePeriod)*time.Second {
 		expireInSec := int64(remainingLife.Seconds())
 		if tokenSTS, err := p.generateSTSRespInner(token.Token, expireInSec); err == nil {
 			if cacheHitCount%cacheHitDivisor == 0 {
-				pluginLog.Debugf("generated an STS response using a cached access token")
+				pluginLog.Infof("generated an STS response using a cached access token")
 			}
 			return tokenSTS, true
 		}
@@ -188,7 +189,7 @@ func (p *Plugin) constructFederatedTokenRequest(parameters stsservice.StsRequest
 		return req, fmt.Errorf("failed to create get federated token request: %+v", err)
 	}
 	req.Header.Set("Content-Type", contentType)
-	if pluginLog.DebugEnabled() {
+	if pluginLog.InfoEnabled() {
 		dQuery := map[string]string{
 			"audience":           aud,
 			"grantType":          parameters.GrantType,
@@ -201,7 +202,7 @@ func (p *Plugin) constructFederatedTokenRequest(parameters stsservice.StsRequest
 		dReq, _ := http.NewRequest("POST", federatedTokenEndpoint, bytes.NewBuffer(dJSONQuery))
 		dReq.Header.Set("Content-Type", contentType)
 		reqDump, _ := httputil.DumpRequest(dReq, true)
-		pluginLog.Debugf("Prepared federated token request: \n%s", string(reqDump))
+		pluginLog.Infof("Prepared federated token request: \n%s", string(reqDump))
 	} else {
 		pluginLog.Info("Prepared federated token request")
 	}
@@ -232,9 +233,9 @@ func (p *Plugin) fetchFederatedToken(parameters stsservice.StsRequestParameters)
 	// resp should not be nil.
 	defer resp.Body.Close()
 
-	if pluginLog.DebugEnabled() {
+	if pluginLog.InfoEnabled() {
 		respDump, _ := httputil.DumpResponse(resp, false)
-		pluginLog.Debugf("Received federated token response after %s: \n%s",
+		pluginLog.Infof("Received federated token response after %s: \n%s",
 			timeElapsed.String(), string(respDump))
 	} else {
 		pluginLog.Infof("Received federated token response after %s", timeElapsed.String())

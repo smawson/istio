@@ -80,8 +80,11 @@ func NewPlugin() plugin.Plugin {
 // ExchangeToken exchange oauth access token from trusted domain and k8s sa jwt.
 func (p Plugin) ExchangeToken(ctx context.Context, trustDomain, k8sSAjwt string) (
 	string /*access token*/, time.Time /*expireTime*/, int /*httpRespCode*/, error) {
+	stsClientLog.Infof("ExchangeToken(_, %s, %s)", trustDomain, k8sSAjwt)
 	aud := constructAudience(trustDomain)
+	stsClientLog.Infof("Constructed Audience %s", aud)
 	var jsonStr = constructFederatedTokenRequest(aud, k8sSAjwt)
+	stsClientLog.Infof("constructed Request %s", jsonStr)
 	req, _ := http.NewRequest("POST", SecureTokenEndpoint, bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", contentType)
 
@@ -105,12 +108,12 @@ func (p Plugin) ExchangeToken(ctx context.Context, trustDomain, k8sSAjwt string)
 	respData := &federatedTokenResponse{}
 	if err := json.Unmarshal(body, respData); err != nil {
 		return "", time.Now(), resp.StatusCode, fmt.Errorf(
-			"failed to unmarshal response data. HTTP status: %s. Error: %v. Body size: %d", resp.Status, err, len(body))
+			"failed to unmarshal response data. HTTP status: %s. Error: %v. Body: %s", resp.Status, err, string(body))
 	}
 
 	if respData.AccessToken == "" {
 		return "", time.Now(), resp.StatusCode, fmt.Errorf(
-			"exchanged empty token. HTTP status: %s. Response: %v", resp.Status, respData)
+			"exchanged empty token. HTTP status: %s. Response: %v", resp.Status, string(body))
 	}
 
 	return respData.AccessToken, time.Now().Add(time.Second * time.Duration(respData.ExpiresIn)), resp.StatusCode, nil

@@ -1,0 +1,15 @@
+. {
+    forward . 169.254.169.254
+    log
+    cache
+    errors
+}
+
+cluster.local {
+    forward . dns://34.106.36.249 {
+      force_tcp
+    }
+    log
+    cache
+    errors
+}

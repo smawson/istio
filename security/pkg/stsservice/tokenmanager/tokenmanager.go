@@ -80,6 +80,10 @@ func CreateTokenManager(tokenManagerType string, config Config) stsservice.Token
 	switch tokenManagerType {
 	case GoogleTokenExchange:
 		if projectInfo := getGCPProjectInfo(); len(projectInfo.Number) > 0 {
+			// TODO(sven): Pull cluster from environment instead. Or just pull in gkeClusterURL rather than calculating it.
+			if len(projectInfo.cluster) < 1 {
+				projectInfo.cluster = "vm-cluster"
+			}
 			gkeClusterURL := fmt.Sprintf("https://container.googleapis.com/v1/projects/%s/locations/%s/clusters/%s",
 				projectInfo.id, projectInfo.clusterLocation, projectInfo.cluster)
 			if p, err := google.CreateTokenManagerPlugin(config.TrustDomain, projectInfo.Number, gkeClusterURL, true); err == nil {
